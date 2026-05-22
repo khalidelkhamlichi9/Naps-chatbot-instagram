@@ -1,0 +1,79 @@
+
+    return True
+
+
+
+
+
+# ── Main pipeline ─────────────────────────────────────────────────────────────
+
+
+
+
+
+# === Anti-AI-Watermark Post-Processor ========================================
+
+def _strip_ai_watermark(text):
+    # type: (str) -> str
+    """Strip AI-sounding patterns so responses read as natural human messages."""
+    import re as _r
+
+    # 1. Remove explicit AI identity phrases (case-insensitive)
+    _ai_pats = [
+        r"(?i)(as an? (ai|artificial intelligence|language model|llm)[,.]?\s*)",
+        r"(?i)(en tant qu.{0,2}(ia|intelligence artificielle)[,.]?\s*)",
+        r"(?i)(je suis (une? )?(ia|intelligence artificielle|assistant ia)[,.]?\s*)",
+        r"(?i)(i('m| am) an? (ai|artificial intelligence|language model|chatbot)[,.]?\s*)",
+        r"(?i)(ana (ai|bernamaj|chatbot)[,.]?\s*)",
+    ]
+    for _p in _ai_pats:
+        text = _r.sub(_p, "", text)
+
+    # 2. Remove markdown headings (## ### ####)
+    text = _r.sub(r"(?m)^#{1,4}\s+.+$", "", text)
+
+    # 3a. Strip keycap number sequences at line start: 1️⃣ 2️⃣ … (digit + FE0F + 20E3)
+    text = _r.sub(r"(?m)^\d[\uFE0F]?\u20E3\s*", "", text)
+
+    # 3b. Strip other emoji prefixes at line start (🔹 ✅ 📌 💳 🚀 👉 etc.)
+    text = _r.sub(
+        r"(?m)^[\U0001F300-\U0001FFFE\U00002600-\U000027BF\U0000FE00-\U0000FE0F\U00002000-\U000023FF\u2705\u270F\u2712\u2714\u2716\u2728\u274C\u274E\u2753\u2757\u2795\u2796\u2797\u27A1\u27B0\u27BF]+\s*",
+        "", text
+    )
+
+    # 3c. Strip any remaining symbols/emojis at start of line (e.g. 👉, 🚀, 💡, 💳)
+    text = _r.sub(r"(?m)^[^\w\s\u0600-\u06FF]+\s*", "", text)
+
+    # 4. Convert bullet lists (- * •) to flowing prose
+    def _b2p(_m):
+        _lines = [_r.sub(r"^\s*[-*\u2022]\s*", "", _l).strip()
+                  for _l in _m.group(0).splitlines() if _l.strip()]
+        return " ".join(_lines)
+    text = _r.sub(r"(?m)(^\s*[-*\u2022]\s+.+\n?)+", _b2p, text)
+
+    # 5. Remove numbered list markers (1. 2. 3.) — keep text
+    text = _r.sub(r"(?m)^\s*\d+[.)\-]\s+", "", text)
+
+    # 6. Keep only the FIRST **bold**, remove the rest
+    _cnt = [0]
+    def _lb(_m):
+        _cnt[0] += 1
+        return _m.group(0) if _cnt[0] == 1 else _m.group(1)
+    text = _r.sub(r"\*\*(.+?)\*\*", _lb, text)
+
+    # 7. Remove italic underscore pseudo-headers
+    text = _r.sub(r"_(.+?)_", r"\1", text)
+
+    # 8. Remove PS notes at end of message
+    text = _r.sub(r"(?i)\(?P\.?S\.?:?.+", "", text)
+
+    # 9. Collapse multiple blank lines
+    text = _r.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
+
+# =============================================================================
+
+async def process_message(
+
+    message: str,

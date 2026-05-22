@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}Cache Redis{% endblock %}
+{% block page_title %}Cache Redis{% endblock %}
+{% set active = 'cache' %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+  <div class="metric"><div class="metric-label">Entrées en cache</div><div class="metric-value">{{ entries|length }}</div><div class="metric-sub">Réponses mémorisées</div></div>
+  <div class="metric"><div class="metric-label">Hit rate global</div><div class="metric-value">{{ hit_rate }}%</div><div class="metric-sub">{{ hits }} / {{ total }} messages</div></div>
+  <div class="metric"><div class="metric-label">Statut Redis</div><div class="metric-value" style="font-size:18px;margin-top:4px">{% if entries %}🟢 Connecté{% else %}🔴 Indisponible{% endif %}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Entrées Redis ({{ entries|length }})</div>
+    {% if entries %}
+    <form method="post" action="/admin/cache/flush" onsubmit="return confirm('Vider tout le cache ?')">
+      <button type="submit" class="btn btn-danger btn-sm">Vider tout le cache</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if entries %}
+  <table>
+    <thead><tr><th style="width:60%">Réponse (extrait)</th><th>TTL restant</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td style="font-size:12.5px;color:#555">{{ e.answer }}</td>
+        <td>
+          {% set hours = (e.ttl // 3600) %}
+          {% set mins  = ((e.ttl % 3600) // 60) %}
+          <span class="pill {% if hours > 12 %}pill-green{% elif hours > 4 %}pill-gold{% else %}pill-red{% endif %}">
+            {{ hours }}h {{ mins }}m
+          </span>
+        </td>
+        <td>
+          <form method="post" action="/admin/cache/delete">
+            <input type="hidden" name="key" value="{{ e.key }}">
+            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:40px;text-align:center;color:var(--muted)">
+    <div style="font-size:32px;margin-bottom:12px">📭</div>
+    <div style="font-size:14px;font-weight:500;color:var(--navy);margin-bottom:6px">Cache vide ou Redis indisponible</div>
+    <div style="font-size:13px">Installez Redis localement pour activer le cache sémantique.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

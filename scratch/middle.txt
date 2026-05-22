@@ -1,0 +1,275 @@
+STATIC_RESPONSES: dict[str, dict[str, str]] = {
+    "greeting": {
+        "fr":     "Bonjour, je suis Karim de NAPS. Comment puis-je vous aider à booster votre activité aujourd'hui ?",
+        "ar":     "مرحباً، أنا كريم من NAPS. كيف يمكنني مساعدتك في تطوير تجارتك اليوم؟",
+        "darija": "Salam, ana Karim mn NAPS. Kifach n9der n3awnk tkhdem mzyan f l-bi3 dyalk l-youm?",
+        "en":     "Hello, I'm Karim from NAPS. How can I help you grow your business today?",
+    },
+    "farewell": {
+        "fr":     "Merci de votre confiance. Je reste à votre disposition pour toute autre question.",
+        "ar":     "شكراً لثقتكم. أنا رهن إشارتكم لأي سؤال آخر.",
+        "darija": "Shokran 3la ti9a dyalk. Ana hna ila htajiti chi 7aja khora.",
+        "en":     "Thank you for your trust. I'm here if you have any other questions.",
+    },
+},
+    "thanks": {
+        "fr":     "Avec plaisir ! C'est ma mission de transformer vos paiements en un levier de succès. Souhaitez-vous découvrir comment nos solutions (TPE, Ecommerce) peuvent augmenter votre agilité ?",
+        "ar":     "بكل سرور! مهمتي هي تحويل عمليات الدفع لديك إلى رافعة للنجاح. هل تود اكتشاف كيف يمكن لحلولنا (TPE، التجارة الإلكترونية) أن تزيد من مرونة عملك؟",
+        "darija": "B kol srour ! Hadchi lach ana hna, bach n'3awnek t'njeh f l'projet dyalk. Wach bghiti n'warrik kifach les solutions dyalna (TPE, Ecommerce) i9drou i'3awnouk t'kber ?",
+        "en":     "You're welcome! My mission is to turn your payments into a growth engine. Would you like to explore how our solutions (POS, Ecommerce) can increase your business agility?",
+    },
+    "farewell": {
+        "fr":     "Au revoir ! J'ai hâte de vous accompagner dans la concrétisation de votre projet NAPS. À très vite pour passer à l'étape supérieure !",
+        "ar":     "مع السلامة! أتطلع لمرافقتك في تحقيق مشروعك مع NAPS. نلتقي قريباً لننتقل إلى المرحلة التالية !",
+        "darija": "Beslama ! Kantmnna n'choufek qrib bach n'bdaw l'projet dyalk m3a NAPS. Ghadi n'koun hna bach n'3awnek t'zid l'9dam !",
+        "en":     "Goodbye! I look forward to supporting you in making your NAPS project a reality. See you soon to take your business to the next level!",
+    },
+    "out_of_scope": {
+        "fr":     "Je suis votre expert dédié aux solutions NAPS (TPE, Cartes, Ecommerce). Pour booster votre activité, rien de tel qu'une solution de paiement adaptée ! Souhaitez-vous que je vous présente nos offres phares ?",
+        "ar":     "أنا خبيرك المتخصص في حلول NAPS (TPE، البطاقات، التجارة الإلكترونية). لتطوير نشاطك، لا شيء يضاهي حل دفع مناسب! هل تود أن أعرض عليك عروضنا الرئيسية؟",
+        "darija": "Ana l'expert dyalk f les solutions NAPS (TPE, Cartes, Ecommerce). Bach t'twwer l'aktivité dyalk, khssek solution de paiement mzyana ! Wach bghiti n'warrik les offres li 3ndna ?",
+        "en":     "I am your dedicated expert for NAPS solutions (POS, Cards, Ecommerce). To boost your business, there's nothing like a tailored payment solution! Would you like me to present our flagship offers?",
+    },
+}�ا الرئيسية؟ 💳",
+
+        "darija": "Ana l'expert dyalk f les solutions NAPS (TPE, Cartes, Ecommerce). Bach t'twwer l'aktivité dyalk, khssek solution de paiement mzyana ! Wach bghiti n'warrik les offres li 3ndna ? 💳",
+
+        "en":     "I am your dedicated expert for NAPS solutions (POS, Cards, Ecommerce). To boost your business, there's nothing like a tailored payment solution! Would you like me to present our flagship offers? 💳",
+
+    },
+
+}
+
+
+
+
+
+async def _get_active_system_prompt(session: AsyncSession, language: str) -> str | None:
+
+    """Fetch the active system prompt for a specific language from DB."""
+
+    result = await session.execute(
+
+        select(SystemPrompt)
+
+        .where(SystemPrompt.is_active == True)
+
+        .where(SystemPrompt.language == language)
+
+        .order_by(SystemPrompt.id.desc())
+
+        .limit(1)
+
+    )
+
+    prompt = result.scalar_one_or_none()
+
+    return prompt.content if prompt else None
+
+
+
+
+
+async def _detect_intent(message: str, language: str) -> str:
+
+    """
+
+    Lightweight intent detection via keyword matching.
+
+    Uses whole-word matching for short signals to avoid false positives.
+
+    """
+
+    msg = message.lower().strip()
+
+    words = set(msg.split())
+
+
+
+    greeting_signals = {"bonjour", "salam", "hello", "hi", "bonsoir", "ahlan", "labas", "allo", "salut"}
+
+    farewell_signals = {"au revoir", "beslama", "bye", "goodbye", "bslama", "a bientot", "à bientôt"}
+
+    thanks_signals   = {"merci", "choukran", "thank", "shokran", "3afak"}
+
+    oos_signals      = {"météo", "foot", "sport", "recette", "cuisine", "blague", "politique"}
+
+
+
+    # Only return static intent for short/pure greetings
+
+    if len(words) <= 3:
+
+        if any(s in words for s in greeting_signals):
+
+            return "greeting"
+
+        if any(s in words for s in thanks_signals):
+
+            return "thanks"
+
+
+
+    if any(s in msg for s in farewell_signals) and len(words) <= 3: 
+
+        return "farewell"
+
+        
+
+    if any(s in msg for s in oos_signals):
+
+        return "out_of_scope"
+
+    return "faq"
+
+
+
+
+
+async def _log_conversation(
+
+    session: AsyncSession,
+
+    user_id: str,
+
+    language: str,
+
+    latency_ms: float,
+
+    cache_hit: bool,
+
+):
+
+    """Log conversation metadata — never log message content."""
+
+    log = Conversation(
+
+        user_id=user_id,
+
+        platform="instagram",
+
+        language=language,
+
+        latency_ms=latency_ms,
+
+        cache_hit=cache_hit,
+
+    )
+
+    session.add(log)
+
+    await session.commit()
+
+
+
+
+
+def _should_cache(message: str) -> bool:
+
+    """
+
+    Determine if a message is 'static/general' enough to be cached.
+
+    Avoids caching messages with numbers (phones, IDs) or specific personal keywords.
+
+    """
+
+    import re
+
+    msg = message.lower()
+
+    
+
+    # 1. Skip if contains digits (potential phone numbers, IDs, amounts)
+
+    if re.search(r'\d{4,}', msg):
+
+        return False
+
+        
+
+    # 2. Skip if it looks like a personal request
+
+    personal_keywords = ["mon ", "ma ", "mes ", "mon compte", "ma carte", "virement", "recharge"]
+
+    if any(k in msg for k in personal_keywords):
+
+        return False
+
+        
+
+    return True
+
+
+
+
+
+# ── Main pipeline ─────────────────────────────────────────────────────────────
+
+
+
+
+
+# === Anti-AI-Watermark Post-Processor ========================================
+
+def _strip_ai_watermark(text):
+    """Deep-clean AI artifacts and formatting for a human-only feel."""
+    import re as _r
+    
+    # 1. Remove explicit AI self-identity phrases
+    _ai_pats = [
+        r'(?i)(as an? (ai|artificial intelligence|language model|llm)[,.]?\s*)',
+        r'(?i)(en tant qu.{0,2}(ia|intelligence artificielle)[,.]?\s*)',
+        r'(?i)(je suis (une? )?(ia|intelligence artificielle|assistant ia)[,.]?\s*)',
+        r'(?i)(i(\'m| am) an? (ai|artificial intelligence|language model|chatbot)[,.]?\s*)',
+        r'(?i)(ana (ai|bernamaj|chatbot)[,.]?\s*)',
+        r'(?i)(bien s[^a-zA-Z]r)',
+        r'(?i)(voici)',
+        r'(?i)(certainement)',
+    ]
+    for _p in _ai_pats:
+        text = _r.sub(_p, '', text)
+
+    # 2. Remove ALL markdown headings (##)
+    text = _r.sub(r'(?m)^#{1,6}\s+', '', text)
+    
+    # 3. Strip ALL Emojis (👉, 🚀, ✅, etc.)
+    emoji_pattern = _r.compile(
+        u"["
+        u"\U0001F600-\U0001F64F"
+        u"\U0001F300-\U0001F5FF"
+        u"\U0001F680-\U0001F6FF"
+        u"\U0001F1E6-\U0001F1FF"
+        u"\U00002600-\U000026FF"
+        u"\U00002700-\U000027BF"
+        u"\U0000FE00-\U0000FE0F"
+        u"\U0001F900-\U0001F9FF"
+        u"\U0001F170-\U0001F251"
+        u"]+", flags=_r.UNICODE)
+    text = emoji_pattern.sub('', text)
+
+    # 4. Remove ALL Markdown bold, italic, and underline symbols
+    text = _r.sub(r'\*\*', '', text)
+    text = _r.sub(r'\*', '', text)
+    text = _r.sub(r'__', '', text)
+    text = _r.sub(r'_', '', text)
+
+    # 5. Remove list markers (- * 1. 2.) and keep it as plain text blocks
+    text = _r.sub(r'(?m)^\s*[-*•]\s+', '', text)
+    text = _r.sub(r'(?m)^\s*\d+[.)\-]\s+', '', text)
+
+    # 6. Remove PS/Note segments
+    text = _r.sub(r'(?i)\(?P\.?S\.?:?.+', '', text)
+    text = _r.sub(r'(?i)Note:?.+', '', text)
+
+    # 7. Collapse spacing
+    text = _r.sub(r' {2,}', ' ', text)
+    text = _r.sub(r'\n{3,}', '\n\n', text)
+    
+    # 8. Moroccan-specific cleanups
+    text = _r.sub(r'(?i)^(Chouf|Smeh li|Hanya|Mreba|Daccord),?\s*', '', text)
+
+    return text.strip()
+
+# =============================================================================
+

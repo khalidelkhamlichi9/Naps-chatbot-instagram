@@ -1,0 +1,24 @@
+services:
+  chatbot:
+    build: .
+    container_name: naps-chatbot
+    restart: always
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    ports:
+      - "8080:8000"
+    depends_on:
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.naps-chatbot.rule=Host(`naps.astraldigital.ma`)"
+      - "traefik.http.routers.naps-chatbot.entrypoints=websecure"
+      - "traefik.http.routers.naps-chatbot.tls=true"
+      - "traefik.http.routers.naps-chatbot.tls.certresolver=letsencrypt"
+      - "traefik.http.services.naps-chatbot.loadbalancer.server.url=http://127.0.0.1:8080"
+  redis:
+    image: redis:7-alpine
+    container_name: naps-redis
+    restart: always

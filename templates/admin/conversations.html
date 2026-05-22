@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}Conversations{% endblock %}
+{% block page_title %}Journal des Conversations{% endblock %}
+{% set active = 'conversations' %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Utilisateurs récents</div>
+    <div style="font-size:12px;color:var(--muted)">Historique basé sur les interactions enregistrées</div>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>USER ID</th>
+          <th>DERNIÈRE ACTIVITÉ</th>
+          <th>NB MESSAGES</th>
+          <th>SESSION REDIS</th>
+          <th style="text-align:right">ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td style="font-family:monospace;font-size:12px;color:var(--gold);font-weight:600">
+            {{ user.user_id }}
+          </td>
+          <td style="color:var(--muted)">{{ user.last_seen.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td><span class="pill pill-blue">{{ user.msg_count }}</span></td>
+          <td>
+            <span class="pill pill-gray">Active (30m)</span>
+          </td>
+          <td style="text-align:right">
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <a href="/admin/conversations/{{ user.user_id }}" class="btn btn-ghost btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  Modifier
+                </a>
+                <form action="/admin/conversations/{{ user.user_id }}/delete" method="POST" onsubmit="return confirm('Supprimer définitivement cette conversation ?')" style="display:inline">
+                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:40px;text-align:center;color:var(--muted)">Aucune conversation trouvée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

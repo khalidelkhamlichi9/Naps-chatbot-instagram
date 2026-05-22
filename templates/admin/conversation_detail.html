@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block title %}Conversation Details{% endblock %}
+{% block page_title %}Édition de l'historique{% endblock %}
+{% set active = 'conversations' %}
+
+{% block extra_styles %}
+<style>
+  .msg-row { border: 1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; background:white; }
+  .msg-header { display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; }
+  .role-badge { font-size:10px; font-weight:700; text-transform:uppercase; padding:2px 8px; border-radius:4px; }
+  .role-user { background:#eff6ff; color:#1d4ed8; }
+  .role-assistant { background:rgba(226,82,0,0.1); color:var(--orange); }
+  .msg-body textarea { border:none; background:var(--off); padding:10px; width:100%; border-radius:8px; font-size:14px; font-family: inherit; outline:none; transition: all 0.2s; }
+  .msg-body textarea:focus { background:white; box-shadow: 0 0 0 2px var(--orange); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:800px; margin:0 auto">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+    <div>
+      <h2 style="font-family: 'Gotham', sans-serif; font-weight:700; color:var(--text-dark)">User: {{ user_id }}</h2>
+      <p style="font-size:12px; color:var(--muted)">Modifier l'historique de la session Redis active</p>
+    </div>
+    <div style="display:flex; gap:10px">
+      <form action="/admin/conversations/{{ user_id }}/clear" method="POST" onsubmit="return confirm('Vider tout l\'historique ?')">
+        <button type="submit" class="btn btn-danger btn-sm">Vider l'historique</button>
+      </form>
+      <a href="/admin/conversations" class="btn btn-ghost btn-sm">Retour</a>
+    </div>
+  </div>
+
+  <form action="/admin/conversations/{{ user_id }}/save" method="POST">
+    <div id="messages-container">
+      {% for msg in history %}
+      <div class="msg-row">
+        <div class="msg-header">
+          <div class="role-badge {% if msg.role == 'user' %}role-user{% else %}role-assistant{% endif %}">
+            {{ msg.role }}
+          </div>
+          <button type="button" onclick="this.closest('.msg-row').remove()" style="background:none; border:none; color:var(--danger); cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div class="msg-body">
+          <input type="hidden" name="role[]" value="{{ msg.role }}">
+          <textarea name="content[]">{{ msg.content }}</textarea>
+        </div>
+      </div>
+      {% else %}
+      <div class="card" style="padding:40px; text-align:center; color:var(--muted)">
+        Aucun message dans l'historique Redis.
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:12px">
+      <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center">Enregistrer les modifications</button>
+      <button type="button" class="btn btn-ghost" onclick="addMessage('assistant')" style="padding:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter Réponse</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function addMessage(role) {
+  const container = document.getElementById('messages-container');
+  const div = document.createElement('div');
+  div.className = 'msg-row';
+  div.innerHTML = `
+    <div class="msg-header">
+      <div class="role-badge role-${role}">${role}</div>
+      <button type="button" onclick="this.closest('.msg-row').remove()" style="background:none; border:none; color:var(--danger); cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    </div>
+    <div class="msg-body">
+      <input type="hidden" name="role[]" value="${role}">
+      <textarea name="content[]" placeholder="Saisissez le message..."></textarea>
+    </div>
+  `;
+  container.appendChild(div);
+  div.querySelector('textarea').focus();
+}
+</script>
+{% endblock %}

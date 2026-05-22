@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% set active = 'dashboard' %}
+
+{% block content %}
+<div class="metrics-grid">
+  <div class="metric"><div class="metric-label">Messages aujourd'hui</div><div class="metric-value">{{ msgs_today }}</div><div class="metric-sub">Total: {{ total_msgs }}</div></div>
+  <div class="metric"><div class="metric-label">Cache hit rate</div><div class="metric-value">{{ hit_rate }}%</div><div class="metric-sub">Réponses instantanées</div></div>
+  <div class="metric"><div class="metric-label">Latence moyenne</div><div class="metric-value">{{ avg_lat }}s</div><div class="metric-sub">Sans cache</div></div>
+  <div class="metric"><div class="metric-label">Chunks KB</div><div class="metric-value">{{ chunks_cnt }}</div><div class="metric-sub"><a href="/admin/chunks" style="color:var(--orange);font-size:11px;text-decoration:none">Gérer →</a></div></div>
+</div>
+
+<div class="layout-2col" style="margin-top:20px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Distribution des langues</div></div>
+    <div style="padding:18px 20px">
+      {% if lang_dist %}
+        {% for item in lang_dist %}
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="font-size:13px;color:#333;width:80px;flex-shrink:0">{{ item.lang|upper }}</div>
+          <div style="flex:1;height:8px;background:var(--off);border-radius:4px;overflow:hidden">
+            <div style="height:100%;border-radius:4px;background:var(--orange);width:{{ [(item.cnt / total_msgs * 100)|int, 100]|min }}%"></div>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--orange);width:36px;text-align:right">{{ item.cnt }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="color:var(--muted);font-size:13.5px">Aucune donnée.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Canaux & Catégories</div></div>
+    <div style="padding:18px 20px">
+        <div style="margin-bottom:15px">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600">Plateformes</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                {% for p in plat_dist %}
+                <span class="pill pill-blue">{{ p.platform }} ({{ p.cnt }})</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600">Top Catégories RAG</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                {% for c in cat_dist[:5] %}
+                <span class="pill pill-gold">{{ c.category }} ({{ c.cnt }})</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-header">
+    <div class="card-title">Dernières Conversations</div>
+    <a href="/admin/conversations" style="font-size:12px;color:var(--orange);text-decoration:none;font-weight:600">Voir tout →</a>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Plateforme</th>
+          <th>Messages</th>
+          <th>Dernière activité</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conv in latest_conversations %}
+        <tr>
+          <td><div style="font-family:monospace;font-size:12px;background:var(--off);padding:2px 6px;border-radius:4px;display:inline-block">{{ conv.user_id }}</div></td>
+          <td><span class="pill pill-gray" style="font-size:10px">{{ conv.platform }}</span></td>
+          <td><span class="pill pill-blue">{{ conv.msgs }}</span></td>
+          <td style="font-size:12px;color:var(--muted)">{{ conv.last_activity.strftime('%d/%m %H:%M') }}</td>
+          <td style="text-align:right">
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <a href="/admin/conversations/{{ conv.user_id }}" class="btn btn-ghost btn-sm" title="Modifier l'historique">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span class="hide-mobile">Modifier</span>
+              </a>
+              <form action="/admin/conversations/{{ conv.user_id }}/delete" method="POST" onsubmit="return confirm('Supprimer définitivement cette conversation ?')" style="display:inline">
+                <button type="submit" class="btn btn-danger btn-sm" title="Supprimer la conversation">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Aucune conversation récente.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="dashboard-grid" style="margin-top:20px">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Actions rapides</div></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <a href="/ui" target="_blank" class="btn" style="width:100%;justify-content:center;background:linear-gradient(135deg,#e25200,#ff6a1a);color:#fff;border:none;font-weight:700;letter-spacing:0.3px;box-shadow:0 2px 10px rgba(226,82,0,0.35);transition:transform 0.15s,box-shadow 0.15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(226,82,0,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 10px rgba(226,82,0,0.35)'">🤖 Tester le Chatbot</a>
+      <a href="/admin/sources" class="btn btn-gold" style="width:100%;justify-content:center">Gérer les Sources Web</a>
+      <a href="/admin/upload" class="btn btn-ghost" style="width:100%;justify-content:center">Importer des documents</a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Statut du système</div></div>
+    <div style="padding:16px">
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px"><span style="color:var(--muted)">FastAPI Server</span><span class="pill pill-green">Running</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px"><span style="color:var(--muted)">Embedder (MiniLM)</span><span class="pill pill-gold">Ready</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:13.5px"><span style="color:var(--muted)">Redis Layer</span><span class="pill pill-blue">Active</span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

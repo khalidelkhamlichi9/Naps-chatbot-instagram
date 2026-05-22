@@ -1,0 +1,129 @@
+{% extends "admin/base.html" %}
+{% block title %}Upload{% endblock %}
+{% block page_title %}Upload & Auto-Chunking{% endblock %}
+{% set active = 'upload' %}
+
+{% block extra_styles %}
+<style>
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;background:var(--off)}
+.upload-zone.drag{border-color:var(--orange);background:rgba(226,82,0,0.05)}
+.upload-zone:hover{border-color:var(--orange)}
+.upload-icon{width:48px;height:48px;margin:0 auto 14px;background:var(--off);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center}
+#progress-bar{height:6px;background:var(--off);border-radius:3px;overflow:hidden;margin-top:16px;display:none}
+#progress-fill{height:100%;background:var(--orange);width:0%;transition:width .3s;border-radius:3px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Importer un fichier</div></div>
+    <div style="padding:24px">
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        </div>
+        <div style="font-weight:600;font-size:14px;color:var(--text-dark);margin-bottom:4px">Glissez un fichier ici</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">.txt, .md, .pdf, .docx — max 10 MB</div>
+        <span class="btn btn-gold btn-sm">Choisir un fichier</span>
+        <input type="file" id="file-input" accept=".txt,.md,.pdf,.doc,.docx" style="display:none">
+      </div>
+
+      <div style="margin-top:20px" id="file-info" style="display:none"></div>
+
+      <div class="form-group" style="margin-top:16px">
+        <label>Catégorie par défaut</label>
+        <select id="category-select"><option value="tous">Tous</option><option value="tpe">TPE</option><option value="ecommerce">E-commerce</option><option value="carte">Carte prépayée</option><option value="famille">Famille</option><option value="entreprise">Entreprise</option><option value="support">Support</option><option value="souscription">Souscription</option></select>
+      </div>
+
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+
+      <button class="btn btn-primary" id="upload-btn" style="width:100%;margin-top:16px;justify-content:center" onclick="doUpload()">
+        Upload &amp; Auto-Chunk
+      </button>
+
+      <div id="result-msg" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <div class="card-header"><div class="card-title">Documents importés</div></div>
+    <div class="table-container">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="background:var(--off);border-bottom:1px solid var(--border)">
+          <tr>
+            <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--muted)">NOM DU FICHIER</th>
+            <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--muted)">CATÉGORIE</th>
+            <th style="padding:12px 16px;text-align:right;font-size:12px;color:var(--muted)">ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in documents %}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:12px 16px;font-size:13.5px;font-weight:500;color:var(--text-dark)">{{ doc.filename }}</td>
+            <td style="padding:12px 16px;font-size:12px"><span style="background:var(--off);padding:2px 8px;border-radius:4px;border:1px solid var(--border)">{{ doc.category }}</span></td>
+            <td style="padding:12px 16px;text-align:right">
+              <form action="/admin/document/delete/{{ doc.id }}" method="POST" onsubmit="return confirm('Supprimer ce document et tous ses chunks ?')">
+                <button type="submit" style="background:none;border:none;padding:4px;cursor:pointer;color:#dc2626">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="padding:40px;text-align:center;color:var(--muted);font-size:13.5px">Aucun document importé.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('file-input');
+const uploadBtn  = document.getElementById('upload-btn');
+const resultMsg  = document.getElementById('result-msg');
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+let selectedFile = null;
+
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f){fileInput.files=e.dataTransfer.files; showFile(f);} });
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) showFile(fileInput.files[0]); });
+
+function showFile(f){
+  selectedFile=f;
+  document.getElementById('file-info').innerHTML=`<div style="background:var(--off);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-dark);display:flex;align-items:center;gap:10px"><span style="font-weight:600">${f.name}</span><span style="color:var(--muted)">${(f.size/1024).toFixed(1)} KB</span></div>`;
+  document.getElementById('file-info').style.display='block';
+}
+
+async function doUpload(){
+  if(!fileInput.files[0]){ alert('Choisissez un fichier'); return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('category', document.getElementById('category-select').value);
+
+  uploadBtn.disabled=true; uploadBtn.textContent='Upload en cours…';
+  progressBar.style.display='block'; progressFill.style.width='30%';
+
+  try{
+    const r = await fetch('/admin/upload', {method:'POST', body:fd});
+    progressFill.style.width='100%';
+    const data = await r.json();
+    if(r.ok){
+      resultMsg.innerHTML=`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#15803d;font-size:13.5px">✓ <strong>${data.chunks_added}</strong> chunks ajoutés depuis <strong>${data.filename}</strong></div>`;
+      setTimeout(()=>location.reload(), 1500);
+    } else {
+      resultMsg.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:#dc2626;font-size:13.5px">Erreur: ${data.error}</div>`;
+    }
+  } catch(e){
+    resultMsg.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:#dc2626;font-size:13.5px">Erreur de connexion</div>`;
+  } finally {
+    uploadBtn.disabled=false; uploadBtn.textContent='Upload & Auto-Chunk';
+    setTimeout(()=>{ progressBar.style.display='none'; progressFill.style.width='0%'; }, 1500);
+  }
+}
+</script>
+{% endblock %}

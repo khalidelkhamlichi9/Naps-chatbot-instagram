@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% block title %}Test RAG{% endblock %}
+{% block page_title %}Tester la récupération RAG{% endblock %}
+{% set active = 'rag' %}
+
+{% block content %}
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header"><div class="card-title">Entrer une question</div></div>
+  <div style="padding:20px">
+    <form method="post" action="/admin/rag-test">
+      <div style="display:flex;gap:10px">
+        <input type="text" name="query" placeholder="Ex: Comment fonctionne le TPE NAPS ?" style="flex:1" value="{{ query or '' }}" required autofocus>
+        <button type="submit" class="btn btn-gold">Tester</button>
+      </div>
+    </form>
+    {% if error %}<div class="alert alert-danger" style="margin-top:14px">{{ error }}</div>{% endif %}
+  </div>
+</div>
+
+{% if top5 is defined and top5 %}
+<div class="layout-2col">
+  <div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:500;margin-bottom:10px">Top 5 — Score cosinus</div>
+    {% for c in top5 %}
+    <div style="background:var(--off);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;position:relative">
+      <div style="position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;color:var(--gold);background:#fff8e6;padding:2px 7px;border-radius:10px">{{ c.score }}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">{{ c.category or 'général' }}</div>
+      <div style="font-size:12.5px;color:#333;line-height:1.5;padding-right:50px">{{ c.content[:200] }}{% if c.content|length > 200 %}…{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:500;margin-bottom:10px">Top 3 — Après reranking DeepSeek</div>
+    {% for c in reranked %}
+    <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:8px;position:relative">
+      <div style="position:absolute;top:10px;right:10px;font-size:11px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 7px;border-radius:10px">#{{ loop.index }}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#16a34a;margin-bottom:4px">{{ c.category or 'général' }}</div>
+      <div style="font-size:12.5px;color:#333;line-height:1.5;padding-right:50px">{{ c.content[:200] }}{% if c.content|length > 200 %}…{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

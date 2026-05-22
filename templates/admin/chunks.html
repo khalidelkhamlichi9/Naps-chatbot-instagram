@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+{% block title %}Base de connaissance{% endblock %}
+{% block page_title %}Base de connaissance{% endblock %}
+{% set active = 'chunks' %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">{{ chunks|length }} chunks — Base NAPS</div>
+    <button class="btn btn-gold btn-sm" onclick="document.getElementById('modal-add').classList.add('open')">+ Ajouter</button>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead><tr><th style="width:50%">Contenu</th><th>Catégorie</th><th>Source</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for chunk in chunks %}
+        <tr>
+          <td style="font-size:12.5px;color:#555;max-width:400px">{{ chunk.content[:120] }}{% if chunk.content|length > 120 %}…{% endif %}</td>
+          <td><span class="pill pill-gold">{{ chunk.category or 'général' }}</span></td>
+          <td><span class="pill pill-gray">{{ chunk.source or 'manual' }}</span></td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="openEdit({{ chunk.id }}, `{{ chunk.content|replace('`','\\`') }}`, `{{ chunk.category or '' }}`)">Éditer</button>
+              <form method="post" action="/admin/chunks/delete/{{ chunk.id }}" onsubmit="return confirm('Supprimer ce chunk ?')">
+                <button type="submit" class="btn btn-danger btn-sm">Sup.</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px">Aucun chunk. Ajoutez-en ou uploadez un fichier.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Ajouter -->
+<div class="modal-bg" id="modal-add">
+  <div class="modal">
+    <h3>Ajouter un chunk</h3>
+    <form method="post" action="/admin/chunks/add">
+      <div class="form-grid">
+        <div class="form-group"><label>Catégorie</label>
+          <select name="category"><option value="tous">Tous</option><option value="tpe">TPE</option><option value="ecommerce">E-commerce</option><option value="carte">Carte prépayée</option><option value="famille">Famille</option><option value="entreprise">Entreprise</option><option value="support">Support</option><option value="souscription">Souscription</option></select>
+        </div>
+        <div class="form-group"><label>Source</label><input type="text" name="source" value="manual"/></div>
+        <div class="form-group full"><label>Contenu</label><textarea name="content" placeholder="Entrez le contenu du chunk..." style="min-height:140px" required></textarea></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-primary">Enregistrer + Embedder</button>
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-add').classList.remove('open')">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Éditer -->
+<div class="modal-bg" id="modal-edit">
+  <div class="modal">
+    <h3>Éditer le chunk</h3>
+    <form method="post" id="form-edit">
+      <div class="form-grid">
+        <div class="form-group"><label>Catégorie</label>
+          <select name="category" id="edit-category"><option value="tous">Tous</option><option value="tpe">TPE</option><option value="ecommerce">E-commerce</option><option value="carte">Carte prépayée</option><option value="famille">Famille</option><option value="entreprise">Entreprise</option><option value="support">Support</option><option value="souscription">Souscription</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Contenu</label><textarea name="content" id="edit-content" style="min-height:140px" required></textarea></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">L'embedding sera recalculé automatiquement.</p>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-edit').classList.remove('open')">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, content, category){
+  document.getElementById('form-edit').action = '/admin/chunks/edit/' + id;
+  document.getElementById('edit-content').value = content;
+  document.getElementById('edit-category').value = category;
+  document.getElementById('modal-edit').classList.add('open');
+}
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click', e=>{ if(e.target===bg) bg.classList.remove('open'); });
+});
+</script>
+{% endblock %}

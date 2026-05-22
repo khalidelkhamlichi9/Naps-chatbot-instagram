@@ -1,0 +1,50 @@
+1: 
+2: 
+3: MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS", "10"))
+4: 
+5: MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "3500"))
+6: 
+7: 
+8: 
+9: # Static responses - no LLM needed
+10: STATIC_RESPONSES: dict[str, dict[str, str]] = {
+11:     "greeting": {
+12:         "fr":     "Bonjour, je suis Karim de NAPS. Comment puis-je vous aider à booster votre activité aujourd'hui ?",
+13:         "ar":     "مرحباً، أنا كريم من NAPS. كيف يمكنني مساعدتك في تطوير تجارتك اليوم؟",
+14:         "darija": "Salam, ana Karim mn NAPS. Kifach n9der n3awnk tkhdem mzyan f l-bi3 dyalk l-youm?",
+15:         "en":     "Hello, I'm Karim from NAPS. How can I help you grow your business today?",
+16:     },
+17:     "farewell": {
+18:         "fr":     "Merci de votre confiance. Je reste à votre disposition pour toute autre question.",
+19:         "ar":     "شكراً لثقتكم. أنا رهن إشارتكم لأي سؤال آخر.",
+20:         "darija": "Shokran 3la ti9a dyalk. Ana hna ila htajiti chi 7aja khora.",
+21:         "en":     "Thank you for your trust. I'm here if you have any other questions.",
+22:     },
+23: },
+24:     "thanks": {
+25:         "fr":     "Avec plaisir ! C'est ma mission de transformer vos paiements en un levier de succès. Souhaitez-vous découvrir comment nos solutions (TPE, Ecommerce) peuvent augmenter votre agilité ?",
+26:         "ar":     "بكل سرور! مهمتي هي تحويل عمليات الدفع لديك إلى رافعة للنجاح. هل تود اكتشاف كيف يمكن لحلولنا (TPE، التجارة الإلكترونية) أن تزيد من مرونة عملك؟",
+27:         "darija": "B kol srour ! Hadchi lach ana hna, bach n'3awnek t'njeh f l'projet dyalk. Wach bghiti n'warrik kifach les solutions dyalna (TPE, Ecommerce) i9drou i'3awnouk t'kber ?",
+28:         "en":     "You're welcome! My mission is to turn your payments into a growth engine. Would you like to explore how our solutions (POS, Ecommerce) can increase your business agility?",
+29:     },
+30:     "farewell": {
+31:         "fr":     "Au revoir ! J'ai hâte de vous accompagner dans la concrétisation de votre projet NAPS. À très vite pour passer à l'étape supérieure !",
+32:         "ar":     "مع السلامة! أتطلع لمرافقتك في تحقيق مشروعك مع NAPS. نلتقي قريباً لننتقل إلى المرحلة التالية !",
+33:         "darija": "Beslama ! Kantmnna n'choufek qrib bach n'bdaw l'projet dyalk m3a NAPS. Ghadi n'koun hna bach n'3awnek t'zid l'9dam !",
+34:         "en":     "Goodbye! I look forward to supporting you in making your NAPS project a reality. See you soon to take your business to the next level!",
+35:     },
+36:     "out_of_scope": {
+37:         "fr":     "Je suis votre expert dédié aux solutions NAPS (TPE, Cartes, Ecommerce). Pour booster votre activité, rien de tel qu'une solution de paiement adaptée ! Souhaitez-vous que je vous présente nos offres phares ?",
+38:         "ar":     "أنا خبيرك المتخصص في حلول NAPS (TPE، البطاقات، التجارة الإلكترونية). لتطوير نشاطك، لا شيء يضاهي حل دفع مناسب! هل تود أن أعرض عليك عروضنا الرئيسية؟",
+39:         "darija": "Ana l'expert dyalk f les solutions NAPS (TPE, Cartes, Ecommerce). Bach t'twwer l'aktivité dyalk, khssek solution de paiement mzyana ! Wach bghiti n'warrik les offres li 3ndna ?",
+40:         "en":     "I am your dedicated expert for NAPS solutions (POS, Cards, Ecommerce). To boost your business, there's nothing like a tailored payment solution! Would you like me to present our flagship offers?",
+41:     },
+42: }�ا الرئيسية؟ 💳",
+43: 
+44:         "darija": "Ana l'expert dyalk f les solutions NAPS (TPE, Cartes, Ecommerce). Bach t'twwer l'aktivité dyalk, khssek solution de paiement mzyana ! Wach bghiti n'warrik les offres li 3ndna ? 💳",
+45: 
+46:         "en":     "I am your dedicated expert for NAPS solutions (POS, Cards, Ecommerce). To boost your business, there's nothing like a tailored payment solution! Would you like me to present our flagship offers? 💳",
+47: 
+48:     },
+49: 
+50: }

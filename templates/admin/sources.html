@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+{% block title %}Sources Web{% endblock %}
+{% block page_title %}Gestion des Sources Web{% endblock %}
+{% set active = 'sources' %}
+
+{% block content %}
+<div class="card" style="max-width:800px">
+  <div class="card-header"><div class="card-title">Ajouter une nouvelle source</div></div>
+  <div style="padding:24px">
+    <form action="/admin/sources/add" method="POST" style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end">
+      <div class="form-group">
+        <label>URL du site</label>
+        <input type="url" name="url" placeholder="https://example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Nom (optionnel)</label>
+        <input type="text" name="name" placeholder="Ex: Documentation NAPS">
+      </div>
+      <button type="submit" class="btn btn-gold" style="height:40px">Ajouter</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Sources configurées</div>
+    <div style="font-size:12px;color:var(--muted)">Le chatbot utilisera ces sites pour répondre</div>
+  </div>
+  <div style="padding:0">
+    <table>
+      <thead>
+        <tr>
+          <th>NOM / URL</th>
+          <th>STATUT</th>
+          <th>DERNIER SCRAPING</th>
+          <th style="text-align:right">ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sources %}
+        <tr>
+          <td>
+            <div style="font-weight:600;color:var(--navy)">{{ s.name or 'Source sans nom' }}</div>
+            <div style="font-size:11.5px;color:var(--gold)">{{ s.url }}</div>
+          </td>
+          <td>
+            {% if s.status == 'active' %}
+            <span class="pill pill-green">Actif</span>
+            {% elif s.status == 'scraping' %}
+            <span class="pill pill-gold">Scraping en cours...</span>
+            {% elif s.status == 'error' %}
+            <span class="pill pill-red">Erreur</span>
+            {% else %}
+            <span class="pill pill-gray">En attente</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:12.5px">
+            {{ s.last_scrape.strftime('%d/%m/%Y %H:%M') if s.last_scrape else 'Jamais' }}
+          </td>
+          <td style="text-align:right">
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <form action="/admin/sources/scrape/{{ s.id }}" method="POST">
+                <button type="submit" class="btn btn-ghost btn-sm" {% if s.status == 'scraping' %}disabled{% endif %}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Scanner
+                </button>
+              </form>
+              <form action="/admin/sources/delete/{{ s.id }}" method="POST" onsubmit="return confirm('Supprimer cette source et tous ses chunks ?')">
+                <button type="submit" class="btn btn-danger btn-sm" style="padding:6px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted)">Aucune source configurée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

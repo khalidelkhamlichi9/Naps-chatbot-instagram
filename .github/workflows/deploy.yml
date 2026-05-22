@@ -1,0 +1,55 @@
+name: Deploy Chatbot NAPS to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Application to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Copy code to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: ".,!.git,!.env,!data,!venv,!__pycache__"
+          target: ${{ secrets.VPS_DEPLOY_PATH || '/root/naps-chatbot' }}
+          rm: false
+          overwrite: true
+
+      - name: Deploy via Docker Compose on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            cd ${{ secrets.VPS_DEPLOY_PATH || '/root/naps-chatbot' }}
+
+            # Ensure persistent data directory exists
+            mkdir -p data
+            chmod 755 data
+
+            # Write production .env securely from GitHub Secrets
+            printf '%s' '${{ secrets.ENV_FILE }}' > .env
+            chmod 600 .env
+
+            # Rebuild & restart only NAPS containers (zero impact on other services)
+            echo "📦 Building and deploying NAPS Chatbot..."
+            docker compose up -d --build --remove-orphans
+
+            # Free up disk space from old images
+            echo "🧹 Pruning old Docker images..."
+            docker image prune -f
+
+            echo "✅ NAPS Chatbot deployment complete!"
