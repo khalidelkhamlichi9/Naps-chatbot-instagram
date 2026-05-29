@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-05-29T12:39:45.862621",
+  "target": "http://localhost:8000",
+  "scenario": "security",
+  "total_time_sec": 3.77,
+  "scenarios": [
+    {
+      "name": "Security & Injection Tests",
+      "total": 26,
+      "success": 26,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_latency_ms": 1414.12,
+      "p95_latency_ms": 3141.0,
+      "p99_latency_ms": 3328.0,
+      "max_latency_ms": 3328.0
+    }
+  ]
+}

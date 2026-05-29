@@ -105,15 +105,10 @@ async def login_page(request: Request):
     return templates.TemplateResponse(request, "admin/login.html", {"error": None})
 
 @router.post("/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), mfa_code: str = Form(None)):
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     if username != ADMIN_USER or not _check_password(password):
         log_audit_event("AUTH_FAILURE", request, user_id=username, details={"reason": "invalid_credentials"})
         return templates.TemplateResponse(request, "admin/login.html", {"error": "Identifiants incorrects"})
-        
-    # Futuristic MFA Stub (e.g., Biometrics, TOTP)
-    if not mfa_code or mfa_code != "000000": # 000000 is our stub bypass code
-        log_audit_event("AUTH_FAILURE", request, user_id=username, details={"reason": "missing_or_invalid_mfa"})
-        return templates.TemplateResponse(request, "admin/login.html", {"error": "Code MFA invalide (Astuce: 000000)"})
 
     log_audit_event("AUTH_SUCCESS", request, user_id=username)
     
@@ -152,9 +147,27 @@ async def dashboard(request: Request, session: AsyncSession = Depends(get_sessio
     plat_rows  = await session.execute(select(Conversation.platform, func.count().label("cnt")).group_by(Conversation.platform).order_by(desc("cnt")))
     plat_dist  = [{"platform": r.platform or "ui", "cnt": r.cnt} for r in plat_rows]
 
-    # Latest 5 conversations (New)
-    latest_rows = await session.execute(select(Conversation).order_by(desc(Conversation.created_at)).limit(5))
-    latest_msgs = latest_rows.scalars().all()
+    # Latest 5 conversations (Grouped by user)
+    latest_rows = await session.execute(
+        select(
+            Conversation.user_id,
+            func.max(Conversation.platform).label("platform"),
+            func.count(Conversation.id).label("msgs"),
+            func.max(Conversation.created_at).label("last_activity")
+        )
+        .group_by(Conversation.user_id)
+        .order_by(desc("last_activity"))
+        .limit(5)
+    )
+    latest_conversations = [
+        {
+            "user_id": r.user_id,
+            "platform": r.platform or "unknown",
+            "msgs": r.msgs,
+            "last_activity": r.last_activity
+        }
+        for r in latest_rows
+    ]
 
     # Top Leads (New)
     lead_rows = await session.execute(
@@ -177,7 +190,7 @@ async def dashboard(request: Request, session: AsyncSession = Depends(get_sessio
         "msgs_today": msgs_today, "hit_rate": hit_rate,
         "avg_lat": round(avg_lat / 1000, 1) if avg_lat else 0,
         "chunks_cnt": chunks_cnt, "total_msgs": total_msgs, "lang_dist": lang_dist,
-        "plat_dist": plat_dist, "latest_msgs": latest_msgs,
+        "plat_dist": plat_dist, "latest_conversations": latest_conversations,
         "top_leads": top_leads, "cat_dist": cat_dist
     })
 

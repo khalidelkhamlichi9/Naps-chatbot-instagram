@@ -200,11 +200,25 @@ async def process_message(
             return _static_stream()
         return answer
 
-    # 2. RAG retrieval
+    # 2. Semantic cache lookup (before any LLM call)
+    query_embedding = embed(message)
+    cached_answer = await search_cache(query_embedding)
+    if cached_answer:
+        logger.info(f"[CACHE HIT] user={user_id} — skipping LLM")
+        await save_history(user_id, "user", message)
+        await save_history(user_id, "assistant", cached_answer)
+        latency = (time.monotonic() - t_start) * 1000
+        await _log_conversation(session, user_id, language, latency, True)
+        if stream:
+            async def _cached_stream(): yield cached_answer
+            return _cached_stream()
+        return cached_answer
+
+    # 3. RAG retrieval
     chunks = await retrieve(message, session)
     context = build_context(chunks)
 
-    # 3. Build prompt
+    # 4. Build prompt
     custom_prompt = await _get_active_system_prompt(session)
     
     lang_names = {"fr": "FRANÇAIS", "ar": "ARABE", "darija": "DARIJA MAROCAIN (ARABE MAROCAIN)", "en": "ANGLAIS"}
@@ -277,7 +291,7 @@ async def process_message(
     messages.extend(history)
     messages.append({"role": "user", "content": message})
 
-    # 4. Call LLM
+    # 5. Call LLM
     if stream:
         async def _stream_and_save():
             full_answer_list = []
@@ -294,6 +308,8 @@ async def process_message(
     answer = _strip_ai_watermark(await call_llm(messages, max_tokens=300))
     await save_history(user_id, "user", message)
     await save_history(user_id, "assistant", answer)
+    # Save to semantic cache for future similar queries
+    await save_to_cache(query_embedding, answer)
     latency = (time.monotonic() - t_start) * 1000
     await _log_conversation(session, user_id, language, latency, False)
     return answer

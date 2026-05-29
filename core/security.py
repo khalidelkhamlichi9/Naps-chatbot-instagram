@@ -43,7 +43,37 @@ if not JWT_SECRET or JWT_SECRET in ("change_me_in_production", "secret"):
 ALGORITHM = "HS256"
 
 # ── Rate Limiter ──────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["20/minute"])
+
+def _get_rate_limit_key(request: Request) -> str:
+    """
+    Rate limit key: uses ui_session cookie or JWT sub when available,
+    so each user/session gets their own bucket instead of sharing by IP.
+    Falls back to IP address.
+    """
+    # 1. Try JWT Bearer sub
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        try:
+            import jose.jwt as _jwt
+            payload = _jwt.decode(auth[7:], options={"verify_signature": False})
+            sub = payload.get("sub")
+            if sub:
+                return f"jwt:{sub}"
+        except Exception:
+            pass
+
+    # 2. Try ui_session cookie (UUID per browser tab)
+    session = request.cookies.get("ui_session", "")
+    if session and len(session) >= 8:
+        clean = re.sub(r'[^a-f0-9\-]', '', session)[:36]
+        if clean:
+            return f"session:{clean}"
+
+    # 3. Fallback to IP
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_get_rate_limit_key, default_limits=["20/minute"])
 
 
 # ── Password Utilities (bcrypt) ───────────────────────────────────────────────

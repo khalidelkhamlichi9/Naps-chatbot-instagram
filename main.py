@@ -89,12 +89,28 @@ app.add_middleware(
 )
 
 # ── Security Headers Middleware ────────────────────────────────────────────────────
+# Paths that skip heavy processing (health probes, static assets)
+_SKIP_AUDIT_PATHS = {"/health", "/favicon.ico"}
+
 @app.middleware("http")
 async def advanced_security_middleware(request: Request, call_next):
-    # Log the incoming request
-    log_audit_event("HTTP_REQUEST", request, details={"path": request.url.path, "method": request.method})
-    
+    t0 = time.monotonic()
+    path = request.url.path
+
+    # Skip audit logging for lightweight health/probe endpoints
+    if path not in _SKIP_AUDIT_PATHS:
+        log_audit_event("HTTP_REQUEST", request, details={"path": path, "method": request.method})
+
     response = await call_next(request)
+
+    # Add response time header (useful for monitoring)
+    elapsed_ms = round((time.monotonic() - t0) * 1000, 2)
+    response.headers["X-Response-Time"] = f"{elapsed_ms}ms"
+
+    # Skip heavy headers for health endpoint (keeps probe latency minimal)
+    if path in _SKIP_AUDIT_PATHS:
+        return response
+
     # Anti-XSS & anti-sniffing
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
